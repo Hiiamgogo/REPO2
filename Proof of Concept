@@ -1,1 +1,39 @@
+function mint(address account, uint256 amount) external {
+    // Access control
+    if (msg.sender != minter) {
+        revert ManagerOnly(msg.sender, minter);
+    }
+    // Check the inflation schedule and mint
+    if (inflationControl(amount)) {
+        _mint(account, amount);
+    }
+}
 
+function burn(uint256 amount) external {
+    _burn(msg.sender, amount);
+}
+
+//Example Attack Scenario
+//Step 1: Deploy a malicious contract that calls the mint or burn function of the OLA contract in a fallback function.
+//Step 2: Trigger the fallback function from the OLA contract.
+//Step 3: The fallback function re-enters the mint or burn function, causing multiple executions before the initial call completes.
+//Code Execution
+//A malicious contract might look like this:
+
+contract Attack {
+    OLA public ola;
+
+    constructor(address _olaAddress) {
+        ola = OLA(_olaAddress);
+    }
+
+    // Fallback function to re-enter the mint function
+    fallback() external payable {
+        ola.mint(address(this), 1000 ether);
+    }
+
+    // Function to start the attack
+    function attack() external {
+        ola.mint(address(this), 1000 ether);
+    }
+}
